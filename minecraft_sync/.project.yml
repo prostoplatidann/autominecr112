@@ -1,0 +1,76 @@
+root_project: minecraft_sync
+
+files:
+  - src/main.py
+  - mods/WorldSyncMod.java
+  - mods/mods.toml
+  - mods/build.gradle
+  - docs/README.md
+  - docs/BUILD_MOD.md
+  - docs/CHANGELOG.md
+  - requirements.txt
+  - build.bat
+
+description: |
+  Minecraft World Sync - приложение для синхронизации игровых миров 
+  Minecraft между участниками Radmin VPN с автоматической сменой хоста.
+
+structure:
+  src/:
+    description: Исходный код Python-приложения
+    files:
+      - main.py: Основной файл приложения с GUI, сетевым модулем, 
+                 менеджером миров и лаунчером
+
+  mods/:
+    description: Forge-мод для Minecraft
+    files:
+      - WorldSyncMod.java: Исходный код мода (Java)
+      - mods.toml: Конфигурация мода для Forge
+      - build.gradle: Скрипт сборки Gradle
+
+  docs/:
+    description: Документация
+    files:
+      - README.md: Основная инструкция по установке и использованию
+      - BUILD_MOD.md: Инструкция по сборке мода из исходников
+      - CHANGELOG.md: История изменений
+
+  root:
+    files:
+      - requirements.txt: Python-зависимости
+      - build.bat: Скрипт сборки .exe на Windows
+
+usage:
+  python_app: |
+    # Установка зависимостей
+    pip install -r requirements.txt
+    
+    # Запуск приложения
+    python src/main.py
+    
+    # Или сборка в .exe
+    build.bat
+
+  forge_mod: |
+    # Требуется Forge MDK 1.21.1
+    # Скопировать файлы мода в проект Forge
+    # Выполнить gradle build
+    # Получить worldsync-1.21.1-1.0.jar
+
+requirements:
+  os: Windows 10/11
+  python: "3.10+"
+  minecraft: "1.21.1 with Forge"
+  launcher: TLauncher
+  vpn: Radmin VPN
+
+features:
+  - UDP discovery в сети Radmin VPN
+  - ICMP ping measurement
+  - AES-128-CBC encryption
+  - World versioning
+  - Automatic LAN hosting
+  - Host migration
+  - Periodic backups
+  - TLauncher integration
