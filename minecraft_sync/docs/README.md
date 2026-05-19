@@ -13,7 +13,12 @@
 
 ### Необходимые Python-библиотеки
 ```bash
-pip install cryptography psutil netifaces pystray pillow
+pip install cryptography psutil netifaces pystray pillow pyautogui
+```
+
+Или установите все зависимости из файла:
+```bash
+pip install -r requirements.txt
 ```
 
 ## Установка
@@ -39,12 +44,23 @@ pip install cryptography psutil netifaces pystray pillow
 
 ### 4. Запуск приложения
 
-#### Если TLauncher установлен в стандартном расположении:
-1. Запустите `minecraft_sync.exe`
+#### Стандартный запуск (автоматический):
+1. Запустите `minecraft_sync.exe` или `python src/main.py`
 2. Введите пароль комнаты Radmin VPN
 3. Выберите путь к `.minecraft` (определяется автоматически)
 4. Выберите мир из списка
-5. Нажмите "Играть"
+5. Нажмите **"Играть"**
+6. ✨ **Программа автоматически:**
+   - Запустит TLauncher
+   - Выберет версию Forge 1.21.1
+   - Нажмёт кнопку "Играть" в TLauncher
+   - Minecraft загрузится
+   - Мод загрузит мир и откроет его для сети (для хоста) / подключится к хосту (для клиента)
+
+**Важно:** Для автоматического запуска требуется установленный `pyautogui`:
+```bash
+pip install pyautogui
+```
 
 #### Если TLauncher не найден автоматически:
 1. Узнайте точный путь к `TLauncher.exe`:
@@ -56,7 +72,7 @@ pip install cryptography psutil netifaces pystray pillow
 4. Перезапустите программу синхронизации
 5. Нажмите "Играть"
 
-**Альтернативный вариант:**
+#### Ручной запуск (если автоматизация не работает):
 1. Запустите TLauncher вручную
 2. Выберите версию Forge 1.21.1
 3. Запустите Minecraft через TLauncher

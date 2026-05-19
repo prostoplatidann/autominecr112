@@ -1,4 +1,3 @@
-# Пример файла для указания пути к TLauncher.exe
-# Скопируйте этот файл в tlauncher_path.txt и укажите полный путь
-
+# Укажите полный путь к TLauncher.exe ниже
+# Пример для Windows:
 C:\Users\danil\AppData\Roaming\.tlauncher\TLauncher.exe

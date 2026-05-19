@@ -494,7 +494,7 @@ class MinecraftLauncher:
 
     
     def launch_minecraft(self, username: str = None, forge_version: str = "forge-1.21.1") -> bool:
-        """Launch Minecraft via TLauncher"""
+        """Launch Minecraft via TLauncher with automatic version selection and game start"""
         if not self.tlauncher_path:
             if not self.find_tlauncher():
                 # Try one more approach - check if javaw.exe is running (Minecraft might already be launched)
@@ -511,23 +511,82 @@ class MinecraftLauncher:
                 return False
         
         try:
-            # Launch TLauncher with parameters
-            # If username is not provided, just launch TLauncher without auto-login
-            if username:
-                cmd = [
-                    self.tlauncher_path,
-                    "-login", username,
-                    "-start",
-                    "-version", forge_version
-                ]
-            else:
-                # Just launch TLauncher, user will select version manually
-                cmd = [self.tlauncher_path]
+            # Launch TLauncher
+            cmd = [self.tlauncher_path]
             
-            logger.info(f"Launching: {' '.join(cmd)}")
+            logger.info(f"Launching TLauncher: {' '.join(cmd)}")
             self.mc_process = subprocess.Popen(cmd)
-            logger.info(f"Minecraft launched with PID {self.mc_process.pid}")
+            logger.info(f"TLauncher launched with PID {self.mc_process.pid}")
+            
+            # Wait for TLauncher to initialize (window appears)
+            logger.info("Waiting for TLauncher to initialize...")
+            time.sleep(5)  # Wait for UI to load
+            
+            # Try to auto-select Forge version and start game using PyAutoGUI
+            try:
+                import pyautogui
+                
+                # Get TLauncher window
+                tlauncher_window = None
+                for i in range(10):  # Try multiple times
+                    try:
+                        tlauncher_window = pyautogui.getWindowsWithTitle('TLauncher')[0]
+                        break
+                    except:
+                        time.sleep(1)
+                
+                if tlauncher_window:
+                    logger.info(f"TLauncher window found: {tlauncher_window.title}")
+                    
+                    # Bring window to front
+                    tlauncher_window.activate()
+                    time.sleep(1)
+                    
+                    # Get window position and size
+                    x, y = tlauncher_window.left, tlauncher_window.top
+                    width, height = tlauncher_window.width, tlauncher_window.height
+                    
+                    logger.info(f"TLauncher window: x={x}, y={y}, w={width}, h={height}")
+                    
+                    # Click on version dropdown (approximate position - adjust based on TLauncher UI)
+                    # The dropdown is typically in the lower part of the window
+                    dropdown_x = x + width // 2
+                    dropdown_y = y + height - 150
+                    
+                    logger.info(f"Clicking version dropdown at ({dropdown_x}, {dropdown_y})")
+                    pyautogui.click(dropdown_x, dropdown_y)
+                    time.sleep(0.5)
+                    
+                    # Type Forge version name to filter
+                    logger.info(f"Typing version: {forge_version}")
+                    pyautogui.write(forge_version, interval=0.05)
+                    time.sleep(0.5)
+                    
+                    # Press Enter to select
+                    pyautogui.press('enter')
+                    time.sleep(0.5)
+                    
+                    # Click the "Играть" (Play) button
+                    # The Play button is typically at the bottom center
+                    play_x = x + width // 2
+                    play_y = y + height - 80
+                    
+                    logger.info(f"Clicking Play button at ({play_x}, {play_y})")
+                    pyautogui.click(play_x, play_y)
+                    
+                    logger.info("TLauncher automation completed - waiting for Minecraft to start")
+                else:
+                    logger.warning("Could not find TLauncher window - user must start manually")
+                    
+            except ImportError:
+                logger.warning("pyautogui not installed - automatic startup disabled")
+                logger.info("Install with: pip install pyautogui")
+            except Exception as e:
+                logger.error(f"Automation failed: {e}")
+                logger.info("User must select version and click Play manually")
+            
             return True
+            
         except Exception as e:
             logger.error(f"Failed to launch Minecraft: {e}")
             return False
