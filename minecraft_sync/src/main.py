@@ -494,7 +494,7 @@ class MinecraftLauncher:
 
     
     def launch_minecraft(self, username: str = None, forge_version: str = "forge-1.21.1") -> bool:
-        """Launch Minecraft via TLauncher with automatic version selection and game start"""
+        """Launch Minecraft via TLauncher with command-line arguments for automatic version selection and game start"""
         if not self.tlauncher_path:
             if not self.find_tlauncher():
                 # Try one more approach - check if javaw.exe is running (Minecraft might already be launched)
@@ -511,24 +511,38 @@ class MinecraftLauncher:
                 return False
         
         try:
-            # Launch TLauncher
+            # Launch TLauncher with command-line arguments
+            # TLauncher supports: -login <username> -start -version <version>
             cmd = [self.tlauncher_path]
             
-            logger.info(f"Launching TLauncher: {' '.join(cmd)}")
+            # Add username if provided
+            if username:
+                cmd.extend(['-login', username])
+            
+            # Auto-start and select version
+            cmd.extend(['-start', '-version', forge_version])
+            
+            logger.info(f"Launching TLauncher with args: {' '.join(cmd)}")
             self.mc_process = subprocess.Popen(cmd)
             logger.info(f"TLauncher launched with PID {self.mc_process.pid}")
+            logger.info("TLauncher will automatically select version and start Minecraft")
             
-            # Wait for TLauncher to initialize (window appears)
-            logger.info("Waiting for TLauncher to initialize...")
-            time.sleep(5)  # Wait for UI to load
+            return True
             
-            # Try to auto-select Forge version and start game using PyAutoGUI
+        except Exception as e:
+            logger.error(f"Failed to launch Minecraft: {e}")
+            logger.info("Falling back to GUI automation...")
+            
+            # Fallback: try GUI automation if command-line fails
             try:
                 import pyautogui
                 
+                # Wait for TLauncher to initialize
+                time.sleep(5)
+                
                 # Get TLauncher window
                 tlauncher_window = None
-                for i in range(10):  # Try multiple times
+                for i in range(10):
                     try:
                         tlauncher_window = pyautogui.getWindowsWithTitle('TLauncher')[0]
                         break
@@ -581,15 +595,11 @@ class MinecraftLauncher:
             except ImportError:
                 logger.warning("pyautogui not installed - automatic startup disabled")
                 logger.info("Install with: pip install pyautogui")
-            except Exception as e:
-                logger.error(f"Automation failed: {e}")
+            except Exception as e2:
+                logger.error(f"Automation fallback failed: {e2}")
                 logger.info("User must select version and click Play manually")
             
             return True
-            
-        except Exception as e:
-            logger.error(f"Failed to launch Minecraft: {e}")
-            return False
     
     def is_running(self) -> bool:
         """Check if Minecraft process is still running"""
@@ -617,7 +627,8 @@ class SyncApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Minecraft World Sync")
-        self.root.geometry("500x400")
+        self.root.geometry("550x480")
+        self.root.resizable(True, True)
         
         self.password = tk.StringVar()
         self.minecraft_dir = tk.StringVar()
@@ -666,7 +677,7 @@ class SyncApp:
         
         # Play button
         self.play_btn = ttk.Button(self.root, text="Play", command=self._on_play, style="Accent.TButton")
-        self.play_btn.pack(pady=20, ipadx=50, ipady=10)
+        self.play_btn.pack(pady=20, ipadx=60, ipady=12)
         
         # Status label
         self.status_label = ttk.Label(self.root, text="Status: Ready", foreground="gray")
@@ -674,7 +685,7 @@ class SyncApp:
         
         # Settings button
         settings_btn = ttk.Button(self.root, text="Settings", command=self._show_settings)
-        settings_btn.pack(pady=5)
+        settings_btn.pack(pady=10)
     
     def _auto_detect_minecraft(self):
         """Auto-detect Minecraft directory"""
