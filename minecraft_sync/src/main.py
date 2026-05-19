@@ -220,9 +220,12 @@ class NetworkManager:
                     else:
                         self.participants[peer_ip]["last_seen"] = time.time()
                         
+            except socket.timeout:
+                # Normal timeout when no data received - don't log
+                pass
             except Exception as e:
                 if self.running:
-                    logger.error(f"Listen error: {e}")
+                    logger.debug(f"Listen error: {e}")
     
     def _connect_tcp(self, ip: str):
         """Establish TCP connection with peer"""
@@ -449,10 +452,26 @@ class MinecraftLauncher:
         """Find TLauncher installation"""
         possible_paths = [
             Path(os.environ.get('APPDATA', '')) / '.tlauncher' / 'TLauncher.exe',
+            Path(os.environ.get('APPDATA', '')) / '.minecraft' / 'TLauncher.exe',
             Path.home() / 'TLauncher' / 'TLauncher.exe',
             Path('C:\\Program Files\\TLauncher') / 'TLauncher.exe',
-            Path('C:\\Program Files (x86)\\TLauncher') / 'TLauncher.exe'
+            Path('C:\\Program Files (x86)\\TLauncher') / 'TLauncher.exe',
+            Path('C:\\Users\\Public') / 'TLauncher' / 'TLauncher.exe',
         ]
+        
+        # Also check registry for TLauncher installation
+        try:
+            import winreg
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\TLauncher")
+                install_path, _ = winreg.QueryValueEx(key, "InstallPath")
+                if install_path:
+                    possible_paths.insert(0, Path(install_path) / 'TLauncher.exe')
+                winreg.CloseKey(key)
+            except:
+                pass
+        except:
+            pass
         
         for path in possible_paths:
             if path.exists():
@@ -460,24 +479,52 @@ class MinecraftLauncher:
                 logger.info(f"TLauncher found: {path}")
                 return str(path)
         
+        # If not found, allow user to specify manually via config file
+        config_path = Path(__file__).parent.parent / 'tlauncher_path.txt'
+        if config_path.exists():
+            custom_path = config_path.read_text().strip()
+            if custom_path and Path(custom_path).exists():
+                self.tlauncher_path = custom_path
+                logger.info(f"TLauncher found via config: {custom_path}")
+                return custom_path
+        
         logger.warning("TLauncher not found in standard locations")
+        logger.info("Please create tlauncher_path.txt with full path to TLauncher.exe")
         return None
+
     
-    def launch_minecraft(self, username: str, forge_version: str = "forge-1.21.1") -> bool:
+    def launch_minecraft(self, username: str = None, forge_version: str = "forge-1.21.1") -> bool:
         """Launch Minecraft via TLauncher"""
         if not self.tlauncher_path:
             if not self.find_tlauncher():
+                # Try one more approach - check if javaw.exe is running (Minecraft might already be launched)
+                for proc in psutil.process_iter(['name', 'cmdline']):
+                    try:
+                        if 'javaw' in proc.info['name'].lower():
+                            cmdline = ' '.join(proc.info['cmdline'] or [])
+                            if 'minecraft' in cmdline.lower() or 'forge' in cmdline.lower():
+                                logger.info(f"Minecraft already running (PID: {proc.pid})")
+                                self.mc_process = proc
+                                return True
+                    except:
+                        pass
                 return False
         
         try:
             # Launch TLauncher with parameters
-            cmd = [
-                self.tlauncher_path,
-                "-login", username,
-                "-start",
-                "-version", forge_version
-            ]
+            # If username is not provided, just launch TLauncher without auto-login
+            if username:
+                cmd = [
+                    self.tlauncher_path,
+                    "-login", username,
+                    "-start",
+                    "-version", forge_version
+                ]
+            else:
+                # Just launch TLauncher, user will select version manually
+                cmd = [self.tlauncher_path]
             
+            logger.info(f"Launching: {' '.join(cmd)}")
             self.mc_process = subprocess.Popen(cmd)
             logger.info(f"Minecraft launched with PID {self.mc_process.pid}")
             return True
@@ -690,8 +737,8 @@ class SyncApp:
                 "host_ip": host_ip
             })
         
-        # Launch Minecraft
-        if not self.launcher.launch_minecraft("Player"):
+        # Launch Minecraft (without auto-login to avoid TLauncher issues)
+        if not self.launcher.launch_minecraft():
             raise Exception("Failed to launch Minecraft")
         
         self.game_running = True
